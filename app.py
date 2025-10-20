@@ -2,8 +2,9 @@
 
 import streamlit as st
 import os
+import matplotlib.pyplot as plt
 
-# نحاول قراءة النتائج من ملف المقارنة
+# دالة بسيطة لقراءة النتائج من ملف المقارنة
 def read_results():
     baseline = "N/A"
     ga_acc = "N/A"
@@ -20,35 +21,51 @@ def read_results():
                     features = line.split(":")[1].strip()
     return baseline, ga_acc, features
 
-# عنوان الصفحة
+
+# إعداد الصفحة
 st.set_page_config(page_title="Quran GA Project", page_icon="📘", layout="centered")
 
 # العنوان الرئيسي
-st.title("Quran GA Project (Student Version)")
-st.write("This is a simple web app created by a beginner student 🌱")
+st.title("Quran Data Project - Genetic Algorithm")
+st.write("This web app was created by a student 🌱 using Streamlit and Python.")
 
-# قراءة النتائج
+# نقرأ النتائج من الملف
 baseline, ga, features = read_results()
 
-# عرض النتائج
+# نعرض القيم
 st.subheader("📊 Results Comparison")
 st.write(f"**Baseline Accuracy:** {baseline}")
 st.write(f"**GA Accuracy:** {ga}")
 st.write(f"**Selected Features Count:** {features}")
 
-# تحليل بسيط
+# رسم بياني بسيط
 if baseline != "N/A" and ga != "N/A":
     try:
         base_val = float(baseline)
         ga_val = float(ga)
+
+        # نصنع رسم بياني باستخدام matplotlib
+        labels = ['Baseline', 'After GA']
+        values = [base_val * 100, ga_val * 100]
+
+        fig, ax = plt.subplots()
+        ax.bar(labels, values, color=['red', 'green'])
+        ax.set_ylabel('Accuracy (%)')
+        ax.set_title('Accuracy Comparison (Baseline vs GA)')
+        ax.set_ylim(0, 100)
+
+        # عرض الرسم داخل الصفحة
+        st.pyplot(fig)
+
+        # تحليل بسيط
         if ga_val > base_val:
             st.success("✅ GA improved the accuracy! Great result.")
         else:
             st.warning("⚠️ GA did not improve accuracy this time.")
     except:
-        pass
+        st.error("Error converting accuracy values.")
 
 st.markdown("---")
 st.write("**Author:** Mohammad Einawi")
 st.write("**GitHub:** [mohammadeinawi243-hub](https://github.com/mohammadeinawi243-hub/quran-ga-project)")
-st.write("_Beginner Python Project using Genetic Algorithm and Streamlit_")
+st.write("_Simple project using Genetic Algorithm and Streamlit_")
