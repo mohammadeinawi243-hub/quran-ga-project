@@ -44,42 +44,55 @@ with col2:
             margin-top: 25px;
         }
         </style>
-        """, unsafe_allow_html=True)
-    st.button("Add File")
+        """,
+        unsafe_allow_html=True,
+    )
 
+# ---------- Default Data Section ----------
 st.write("This is a simple web app made by student 🌱")
 st.markdown("---")
 
-# ---------- Data Display ----------
-if os.path.exists("quran_data.csv"):
-    df = pd.read_csv("quran_data.csv")
+# زر تحميل ملف جديد
+uploaded_file = st.file_uploader("📂 Add File (CSV)", type=["csv"])
 
-    st.subheader("📊 Quran Data Overview")
-    st.write(f"**Rows:** {df.shape[0]} | **Columns:** {df.shape[1]}")
-    st.dataframe(df.head())
-
-    # ---------- Results Section ----------
-    baseline, ga, features = read_results()
-
-    st.markdown("### ⚙️ Model Performance Comparison")
-    st.write(f"**Baseline Accuracy:** {baseline}")
-    st.write(f"**GA Accuracy:** {ga}")
-    st.write(f"**Selected Features Count:** {features}")
-
-    # ---------- Plot ----------
-    try:
-        base_val = float(baseline)
-        ga_val = float(ga)
-        plt.figure(figsize=(4, 4))
-        plt.bar(["Baseline", "After GA"], [base_val * 100, ga_val * 100],
-                color=["#FF4B4B", "#2ECC71"])
-        plt.ylabel("Accuracy (%)")
-        plt.title("Accuracy Comparison")
-        st.pyplot(plt)
-    except:
-        st.warning("Could not generate chart. Please check data format.")
+# ---------- Load Default File or Uploaded ----------
+if uploaded_file is not None:
+    # إذا رفع المستخدم ملف جديد
+    df = pd.read_csv(uploaded_file)
+    st.success("✅ File uploaded successfully!")
 else:
-    st.error("⚠️ Quran data file (quran_data.csv) not found!")
+    # إذا لم يرفع ملف، نستخدم ملف القرآن الافتراضي
+    if os.path.exists("quran_data.csv"):
+        df = pd.read_csv("quran_data.csv")
+    else:
+        st.error("⚠️ Quran data file (quran_data.csv) not found!")
+        st.stop()
+
+# ---------- Data Overview ----------
+st.subheader("📊 Data Overview")
+st.write(f"**Rows:** {df.shape[0]} | **Columns:** {df.shape[1]}")
+st.dataframe(df.head())
+
+# ---------- Results Section ----------
+st.markdown("### ⚙️ Model Performance Comparison")
+
+baseline, ga, features = read_results()
+
+st.write(f"**Baseline Accuracy:** {baseline}")
+st.write(f"**GA Accuracy:** {ga}")
+st.write(f"**Selected Features Count:** {features}")
+
+# ---------- Plot ----------
+try:
+    base_val = float(baseline)
+    ga_val = float(ga)
+    plt.figure(figsize=(4, 4))
+    plt.bar(["Baseline", "After GA"], [base_val * 100, ga_val * 100], color=["#FF4B4B", "#2ECC71"])
+    plt.ylabel("Accuracy (%)")
+    plt.title("Accuracy Comparison")
+    st.pyplot(plt)
+except:
+    st.warning("Could not generate chart. Please check data format.")
 
 st.markdown("---")
 st.write("**Author:** Mohammad Einawi")
