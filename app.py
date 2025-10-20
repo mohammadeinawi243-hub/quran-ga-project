@@ -43,13 +43,10 @@ def load_setup():
 # returns X (sparse), y (array), feature_names list
 # -------------------------
 def prepare_features(df, tf=None, num_cols=None, tf_max_features=1000):
-    # Make sure required columns exist
-    # If it's text dataset with 'verses' and 'revelation_place'
     if 'revelation_place' in df.columns and 'verses' in df.columns:
         df = df.dropna(subset=['revelation_place', 'verses'])
         y = df['revelation_place'].astype(str).values
 
-        # numeric columns: try to use provided num_cols or infer numeric columns
         if not num_cols:
             inferred_num = [c for c in df.columns if df[c].dtype != 'object' and c != 'revelation_place']
         else:
@@ -57,7 +54,6 @@ def prepare_features(df, tf=None, num_cols=None, tf_max_features=1000):
 
         X_num = df[inferred_num].fillna(0).values if inferred_num else np.zeros((len(df), 0))
 
-        # text features: if a tf vectorizer provided use it, else create a TF-IDF with limited features
         if tf is None:
             tf = TfidfVectorizer(max_features=min(tf_max_features, 1000))
             X_text = tf.fit_transform(df['verses'].astype(str).values)
@@ -66,7 +62,6 @@ def prepare_features(df, tf=None, num_cols=None, tf_max_features=1000):
             X_text = tf.transform(df['verses'].astype(str).values)
             tf_is_new = False
 
-        # combine numeric and text
         if X_num.shape[1] > 0:
             X = hstack([csr_matrix(X_num), X_text])
             feature_names = inferred_num + [f"tf_{i}" for i in range(X_text.shape[1])]
@@ -76,14 +71,12 @@ def prepare_features(df, tf=None, num_cols=None, tf_max_features=1000):
 
         return X, y, feature_names, tf, inferred_num, tf_is_new
     else:
-        # Fallback: dataset without text. Use numeric columns only.
         y = None
         numeric = df.select_dtypes(include=[np.number])
         if numeric.shape[1] == 0:
             return None, None, [], None, [], False
         X = csr_matrix(numeric.values)
         feature_names = numeric.columns.tolist()
-        # Note: no y here, user must choose target later
         return X, None, feature_names, None, feature_names, False
 
 # -------------------------
@@ -103,14 +96,12 @@ def fitness(chrom, X, y, cv):
     return score - penalty
 
 # -------------------------
-# Simple GA runner (keeps it small by default)
-# returns best_score, best_mask
+# Simple GA runner
 # -------------------------
 def run_ga(X, y, pop_size=10, generations=6, p_mut=0.02, min_features=10, progress_callback=None):
     n = X.shape[1]
     cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
     pop = [np.random.choice([0,1], size=n, p=[0.98,0.02]).astype(int) for _ in range(pop_size)]
-    # ensure min features
     for i in range(len(pop)):
         if pop[i].sum() < min_features:
             ones = np.random.choice(range(n), size=min_features, replace=False)
@@ -124,18 +115,15 @@ def run_ga(X, y, pop_size=10, generations=6, p_mut=0.02, min_features=10, progre
         scored.sort(key=lambda x: x[0], reverse=True)
         if scored[0][0] > best[0]:
             best = (scored[0][0], scored[0][1].copy())
-        # selection: top half
         parents = [ind for _, ind in scored[:max(2, pop_size//2)]]
         new_pop = parents.copy()
         while len(new_pop) < pop_size:
             a, b = random.sample(parents, 2)
             pt = random.randint(1, n-1)
             child = np.concatenate([a[:pt], b[pt:]])
-            # mutation
             for i in range(n):
                 if random.random() < p_mut:
                     child[i] = 1 - child[i]
-            # ensure min_features
             if child.sum() < min_features:
                 ones = np.random.choice(range(n), size=min_features, replace=False)
                 child[ones] = 1
@@ -164,7 +152,7 @@ def read_results():
         return None, None, None
 
 # -------------------------
-# UI: left column for upload & options, right column for results
+# UI
 # -------------------------
 col_left, col_right = st.columns([1, 2])
 
@@ -182,10 +170,8 @@ with col_left:
 with col_right:
     st.header("Dataset & Results")
 
-# Load pre-saved vectorizer & numeric cols if exist
 tf, saved_num_cols = load_setup()
 
-# Decide which dataframe to use
 df = None
 if uploaded is not None:
     try:
@@ -198,22 +184,18 @@ else:
     st.info("Upload a CSV or enable default quran_data.csv")
     st.stop()
 
-# quick preview
 st.subheader("Data Preview")
 st.write(f"Rows: {df.shape[0]}  |  Columns: {df.shape[1]}")
 st.dataframe(df.head())
 
-# If text dataset (verses + revelation_place)
 if 'revelation_place' in df.columns and 'verses' in df.columns:
     st.info("Detected text dataset with 'verses' and 'revelation_place' columns.")
-    # prepare features
     with st.spinner("Preparing features (TF-IDF + numeric)..."):
         X, y, feature_names, tf_used, num_cols_used, tf_is_new = prepare_features(df, tf=tf, num_cols=saved_num_cols, tf_max_features=1000)
     if X is None or y is None:
         st.error("Could not prepare features. Check your dataset.")
         st.stop()
 
-    # Baseline (LogisticRegression)
     with st.spinner("Calculating baseline accuracy..."):
         try:
             cv = StratifiedKFold(n_splits=4, shuffle=True, random_state=42)
@@ -226,12 +208,10 @@ if 'revelation_place' in df.columns and 'verses' in df.columns:
     st.subheader("Baseline Result")
     st.write(f"Baseline Accuracy: **{baseline_score:.4f}**")
 
-    # If user presses run GA button
     if run_ga_button:
         st.info("Starting GA... please be patient.")
         progress_bar = st.progress(0.0)
         start = time.time()
-        # progress callback to update bar
         def progress_cb(frac):
             try:
                 progress_bar.progress(min(max(frac, 0.0), 1.0))
@@ -246,26 +226,26 @@ if 'revelation_place' in df.columns and 'verses' in df.columns:
             selected_count = int(best_mask.sum())
             st.success(f"GA finished in {duration:.1f} sec. GA accuracy: {best_score:.4f}, selected features: {selected_count}")
 
-            # Save mask (optional)
             try:
                 np.save("best_mask.npy", best_mask)
             except:
                 pass
 
-            # show selected feature names (limit first 200)
             selected_names = [feature_names[i] for i in np.where(best_mask==1)[0]]
             st.write("Selected feature names (first 200):")
             st.write(selected_names[:200])
 
-            # Comparison chart
+            # ---- Matplotlib Bar Chart (Red/Green with numbers) ----
             fig, ax = plt.subplots()
             ax.bar(["Baseline", "After GA"], [baseline_score*100, best_score*100], color=["#FF4B4B", "#2ECC71"])
             ax.set_ylabel("Accuracy (%)")
             ax.set_ylim(0, 100)
             ax.set_title("Baseline vs GA")
+            for i, v in enumerate([baseline_score*100, best_score*100]):
+                ax.text(i, v + 1, f"{v:.2f}%", ha='center', fontweight='bold')
             st.pyplot(fig)
+            # -------------------------------------------------------
 
-            # write comparison.txt so professor can see raw numbers if he downloads
             try:
                 with open("comparison.txt", "w") as f:
                     f.write(f"baseline: {baseline_score}\n")
@@ -276,18 +256,22 @@ if 'revelation_place' in df.columns and 'verses' in df.columns:
                 st.warning(f"Could not save comparison.txt: {e}")
 
     else:
-        # show existing comparison if exists
         baseline_val, ga_val, features_cnt = read_results()
         if ga_val is not None:
             st.subheader("Saved Comparison (existing)")
             st.write(f"Baseline: {baseline_val:.4f}  |  After GA: {ga_val:.4f}  | Selected: {features_cnt}")
-            try:
-                st.bar_chart({"Baseline":[baseline_val*100], "After GA":[ga_val*100]})
-            except:
-                pass
+
+            # Matplotlib version for saved comparison
+            fig, ax = plt.subplots()
+            ax.bar(["Baseline", "After GA"], [baseline_val*100, ga_val*100], color=["#FF4B4B", "#2ECC71"])
+            ax.set_ylabel("Accuracy (%)")
+            ax.set_ylim(0, 100)
+            ax.set_title("Baseline vs GA (Saved)")
+            for i, v in enumerate([baseline_val*100, ga_val*100]):
+                ax.text(i, v + 1, f"{v:.2f}%", ha='center', fontweight='bold')
+            st.pyplot(fig)
 
 else:
-    # Non-text dataset: let user pick target column from numeric columns
     st.info("Detected a non-text dataset. You must select a numeric target column for classification.")
     numeric = df.select_dtypes(include=[np.number])
     if numeric.shape[1] == 0:
@@ -299,7 +283,6 @@ else:
         X = numeric.drop(columns=[target]).values
         y = df[target].values
         X = csr_matrix(X)
-        # baseline
         with st.spinner("Calculating baseline..."):
             try:
                 cv = StratifiedKFold(n_splits=4, shuffle=True, random_state=42)
@@ -317,6 +300,5 @@ else:
             st.success(f"GA finished in {duration:.1f} sec. GA accuracy: {best_score:.4f}")
             st.write("Selected count:", int(best_mask.sum()))
 
-# Footer
 st.markdown("---")
 st.caption("Made by Mohammad Einawi")
