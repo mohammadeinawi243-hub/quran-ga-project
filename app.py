@@ -30,7 +30,7 @@ def read_results():
 st.set_page_config(page_title="Quran GA Project", page_icon="📘", layout="centered")
 
 st.title("Quran GA Project (Student Version)")
-st.write("This is a simple web app created by a beginner student 🌱")
+st.write("This is a simple web app created by student 🌱")
 
 # Read results from file
 baseline, ga, features = read_results()
@@ -90,6 +90,5 @@ else:
 # 🧑‍💻 Footer info
 # --------------------------------------------------
 st.markdown("---")
-st.write("**Author:** Mohammad Einawi")
 st.write("**GitHub:** [mohammadeinawi243-hub](https://github.com/mohammadeinawi243-hub/quran-ga-project)")
 st.write("_Python Project using Genetic Algorithm and Streamlit_")

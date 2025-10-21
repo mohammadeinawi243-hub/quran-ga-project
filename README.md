@@ -2,7 +2,7 @@
 
 Hello 👋  
 This is my small project for my university assignment.  
-I am a beginner student and this project helped me learn about Python, data, and Genetic Algorithm.
+I am a student and this project helped me learn about Python, data, and Genetic Algorithm.
 
 ---
 
@@ -72,5 +72,4 @@ Sometimes it takes time, and not always better, but it was fun to test and see h
 ---
 
 ## ✨ Author
-**Student Name:** Mohammad Einawi  
 **GitHub:** [mohammadeinawi243-hub](https://github.com/mohammadeinawi243-hub)
