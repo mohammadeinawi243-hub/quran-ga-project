@@ -1,5 +1,4 @@
 # ga_feature_selection_improved.py
-# Improved GA with better performance and stronger model
 
 import numpy as np
 import random
